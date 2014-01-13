@@ -8,8 +8,7 @@ var defaults = require('lodash.defaults');
 module.exports = function (options) {
 
   function parseLess (file) {
-    var self = this;
-    if (file.isNull()) return this.queue(file); // pass along
+    if (file.isNull()) return this.push(file); // pass along
     if (file.isStream()) return self.emit('error', new PluginError('gulp-less', 'Streaming not supported'));
 
     // set the default options
@@ -20,19 +19,20 @@ module.exports = function (options) {
 
     // let people use their own compressor
     delete opts.compress;
+
     this.pause();
 
     var str = file.contents.toString('utf8');
     less.render(str, opts, function (err, css) {
       if (err) {
-        self.emit('error', new PluginError('gulp-less', err));
-        return self.resume();
+        this.emit('error', new PluginError('gulp-less', err));
+        return;
       }
       file.contents = new Buffer(css);
       file.path = gutil.replaceExtension(file.path, '.css');
-      self.emit('data', file);
-      self.resume();
-    });
+      this.queue(file);
+      this.resume();
+    }.bind(this));
   }
 
   return through(parseLess);
